@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query
 
 from app.core.database import get_db
 from app.schemas.common import PaginatedResponse
@@ -10,6 +10,7 @@ from app.schemas.monitoring_accounts import (
     MonitoringAccountUpdate,
 )
 from app.services import monitoring_accounts as service
+from app.services.monitoring_accounts import MonitoringAccountAlreadyExists
 
 router = APIRouter()
 
@@ -25,7 +26,12 @@ async def list_monitoring_accounts(
 
 @router.post("", response_model=MonitoringAccountResponse, status_code=201)
 async def create_monitoring_account(data: MonitoringAccountCreate):
-    account = await service.create_monitoring_account(data)
+    try:
+        account = await service.create_monitoring_account(data)
+    except MonitoringAccountAlreadyExists as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     return account
 
 
