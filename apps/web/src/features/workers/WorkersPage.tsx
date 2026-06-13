@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatRelativeTime, statusColor } from "@/lib/format";
+import { formatRelativeTime } from "@/lib/format";
 
 export default function WorkersPage() {
   const { data: workers, isLoading } = useQuery({

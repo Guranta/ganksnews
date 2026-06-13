@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api";
-import type { QueueInfo, DeadLetterEntry } from "@/types";
+import type { QueueInfo } from "@/types";
 import {
   Card,
   CardContent,

@@ -31,7 +31,7 @@ async def upsert_heartbeat(
             set_={
                 "status": stmt.excluded.status,
                 "current_task": stmt.excluded.current_task,
-                "metadata_": stmt.excluded.metadata_,
+                "metadata_": metadata,
                 "updated_at": stmt.excluded.updated_at,
             },
         )

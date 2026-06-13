@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import signal
 
 from app.core.config import settings
 from app.streams import CRAWL_JOBS, CG_DETAIL, RAW_TWEETS, EVT_TWEET_NEW
@@ -53,12 +52,4 @@ class DetailWorker(WorkerBase):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
     worker = DetailWorker()
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
-    def _shutdown(signum, frame):
-        worker.stop()
-
-    signal.signal(signal.SIGTERM, _shutdown)
-    signal.signal(signal.SIGINT, _shutdown)
-    loop.run_until_complete(worker.run())
+    asyncio.run(worker.start())

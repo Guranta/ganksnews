@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import signal
 import uuid
 from datetime import datetime, timezone
 
@@ -157,12 +156,4 @@ class ListenerWorker(WorkerBase):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
     worker = ListenerWorker()
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
-    def _shutdown(signum, frame):
-        worker.stop()
-
-    signal.signal(signal.SIGTERM, _shutdown)
-    signal.signal(signal.SIGINT, _shutdown)
-    loop.run_until_complete(worker.run())
+    asyncio.run(worker.start())

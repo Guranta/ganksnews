@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api";
 import { useSSE } from "@/hooks/useSSE";
-import type { SSEEvent } from "@/hooks/useSSE";
 import {
   Card,
   CardContent,
