@@ -105,7 +105,7 @@
 | 需求编号 | 描述 | 优先级 | 备注 |
 |---------|------|--------|------|
 | T-001 | 使用 CloakBrowser / Playwright 持久化 Browser Profile 监听公开 Twitter/X 页面 | P0 | 唯一数据源 |
-| T-002 | 监听账号手工登录 Profile 后复制到服务器 | P0 | 后续再评估 noVNC |
+| T-002 | 监听账号登录态准备 | P0 | Phase 1 支持手工登录 Profile 后复制到服务器；Phase 2B 规划 noVNC 服务器浏览器登录会话 |
 
 ### 3.2 技术栈
 
@@ -158,7 +158,7 @@
 - 不采集私信、非公开账号或受限内容。
 - Phase 1 不做关键词规则、情感分析、异常检测、多租户、复杂 RBAC。
 - Phase 1 不做 Elasticsearch / OpenSearch。
-- Phase 1 不做 noVNC 服务器登录界面。
+- Phase 1 不做 noVNC 服务器登录界面；Phase 2B 规划为后续服务器浏览器登录能力。
 - Phase 1 不做 Prometheus / Grafana。
 
 ---
@@ -169,3 +169,4 @@
 |------|------|---------|------|
 | v1.0 | 2026-06-13 | 初始版本 | - |
 | v2.0 | 2026-06-13 | 废弃 X API / snscrape 方案，改为 CloakBrowser 浏览器监听方案，对齐 V1 实施计划 | - |
+| v2.1 | 2026-06-13 | 补充 Phase 2B noVNC 服务器浏览器登录会话方向 | - |

@@ -66,7 +66,7 @@ LittleGankNews 第一版用于监控 Twitter/X 公开账号的新动态，面向
 | 数据源 | Twitter/X Web 页面 |
 | 浏览器方案 | CloakBrowser + Playwright-compatible API |
 | 登录态 | 持久化 Browser Profile |
-| 监听账号登录 | 手工登录 Profile 后复制到服务器，后续再评估 noVNC |
+| 监听账号登录 | Phase 1 支持手工登录 Profile 后复制到服务器；Phase 2B 规划 noVNC 服务器浏览器登录 |
 | 后端 | FastAPI |
 | ORM | SQLAlchemy 2.0 async |
 | 迁移 | Alembic |
@@ -533,7 +533,7 @@ TELEGRAM_DEFAULT_CHAT_ID=
 
 ### Phase 2：队列、Worker、SSE
 
-详细计划见：[Phase 2 Worker / SSE / Profile Health 详细实施计划](2026-06-13-phase2-worker-sse-profile-health-plan.md)。
+详细计划见：[Phase 2 Worker / SSE / Profile Health / noVNC Login 详细实施计划](2026-06-13-phase2-worker-sse-profile-health-plan.md)。
 
 交付物：
 
@@ -542,6 +542,9 @@ TELEGRAM_DEFAULT_CHAT_ID=
 - Scheduler / Health Worker。
 - SSE `/events/stream`。
 - 前端通知中心。
+- Profile lock 和健康检查。
+- Login Session API。
+- noVNC 服务器浏览器登录会话，用于生成 Browser Profile。
 
 验收标准：
 

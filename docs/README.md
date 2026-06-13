@@ -10,7 +10,7 @@
 | [requirements.md](requirements.md) | 需求文档，基于 CloakBrowser 浏览器监听方案，描述 20-30 目标账号 Phase 1 需求 | 已更新 |
 | [architecture.md](architecture.md) | 架构图，基于 CloakBrowser + Redis Streams + SSE 的浏览器监听架构 | 已更新 |
 | [plans/2026-06-13-littleganknews-v1-implementation-plan.md](plans/2026-06-13-littleganknews-v1-implementation-plan.md) | 第一版详细实施计划，按 Linux 4GB 测试服务器、20-30 目标账号、Web Dashboard + SSE 优先落地 | 当前执行 |
-| [plans/2026-06-13-phase2-worker-sse-profile-health-plan.md](plans/2026-06-13-phase2-worker-sse-profile-health-plan.md) | Phase 2 详细实施计划，覆盖 Redis Streams、Worker 基座、SSE、Profile 锁和健康检查状态机 | 待实施 |
+| [plans/2026-06-13-phase2-worker-sse-profile-health-plan.md](plans/2026-06-13-phase2-worker-sse-profile-health-plan.md) | Phase 2 详细实施计划，覆盖 Redis Streams、Worker 基座、SSE、Profile 锁、健康检查和 noVNC 服务器浏览器登录 | 待实施 |
 | [plans/2026-06-13-twitter-browser-monitor-plan.md](plans/2026-06-13-twitter-browser-monitor-plan.md) | 早期浏览器监听方案背景参考 | 背景参考 |
 | [research/dashboard-ui-recommendations.md](research/dashboard-ui-recommendations.md) | 前端 UI 技术栈调研 | 已确认 |
 
@@ -18,6 +18,7 @@
 
 - GitHub 远端使用 `https://github.com/Guranta/ganksnews.git`。
 - 从当前阶段开始，每完成一个可验收步骤都必须提交并推送到 GitHub。
+- 监控账号登录目标体验选择服务器浏览器登录：前端创建 Login Session，通过 noVNC 操作服务器浏览器登录 Twitter/X，并保存 Browser Profile。
 - 主链路舍弃 X API。
 - 不使用 snscrape 作为主链路或备用链路。
 - 使用 CloakBrowser / Playwright 持久化 Browser Profile 监听公开 Twitter/X 页面。

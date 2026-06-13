@@ -7,11 +7,19 @@ flowchart LR
     subgraph Web[Frontend]
         UI[Vite React Dashboard]
         SSEClient[SSE Client]
+        LoginUI[Login Session UI]
     end
 
     subgraph API[Backend]
         FastAPI[FastAPI REST API]
         SSE[SSE Endpoint]
+        LoginSessions[Login Sessions API]
+    end
+
+    subgraph RemoteBrowser[Remote Browser Login]
+        NoVNC[noVNC]
+        Xvfb[Xvfb]
+        LoginBrowser[Chromium/CloakBrowser]
     end
 
     subgraph Workers[Workers]
@@ -41,8 +49,14 @@ flowchart LR
 
     UI --> FastAPI
     SSEClient --> SSE
+    LoginUI --> LoginSessions
     FastAPI --> PG
     FastAPI --> Redis
+    LoginSessions --> NoVNC
+    NoVNC --> Xvfb
+    Xvfb --> LoginBrowser
+    LoginBrowser --> X
+    LoginBrowser --> Profiles
     Scheduler --> PG
     Listener --> Profiles
     Listener --> X
@@ -96,9 +110,19 @@ flowchart TD
     HealthCheck -->|可用| Available[状态变为 available]
     HealthCheck -->|不可用| NeedsLogin[状态变为 needs_login，前端提示人工处理]
 
+    WebLogin[Monitoring Accounts 点击服务器浏览器登录] --> CreateSession[创建 Login Session]
+    CreateSession --> RemoteBrowser[打开 noVNC 远程浏览器]
+    RemoteBrowser --> LoginX[用户登录 Twitter/X]
+    LoginX --> Complete[用户点击我已完成登录]
+    Complete --> LoginHealth[Health Check 验证登录态]
+    LoginHealth -->|可用| CreateProfile[创建 Monitoring Account 并绑定 Browser Profile]
+    LoginHealth -->|不可用| LoginIssue[标记 needs_login / challenged / error]
+
     Import[Target Accounts 页面粘贴导入] --> Upsert[后端 upsert 到 target_accounts]
     Upsert --> Active[状态为 active，纳入监听计划]
 ```
+
+服务器浏览器登录是 Phase 2B 目标能力。MVP 同一时间只允许 1 个 login session，noVNC 必须通过短期 token 和受保护反向代理访问，禁止裸露 VNC 或 Chrome remote debugging 端口。
 
 ## 4. Worker 架构
 
@@ -126,6 +150,8 @@ flowchart TB
             Redis[(Redis)]
             API[FastAPI API]
             Web[Vite React Dashboard]
+            RemoteBrowser[Remote Browser
+Xvfb + noVNC + Chromium]
             Scheduler[Scheduler]
             Listener[Listener Worker]
             Detail[Detail Worker]
@@ -143,6 +169,7 @@ flowchart TB
 
     User[管理员] --> Web
     Web --> API
+    Web --> RemoteBrowser
     API --> PG
     API --> Redis
     Listener --> X
@@ -154,6 +181,8 @@ flowchart TB
 | 模块 | 职责 | 关键点 |
 |------|------|--------|
 | FastAPI API | REST API + SSE，账号/Profile/推文管理 | CRUD + 批量导入 + SSE 推送 |
+| Login Sessions API | 创建服务器远程浏览器登录会话 | noVNC 短期 token、完成/取消、状态事件 |
+| Remote Browser | 提供服务器侧可交互浏览器 | Xvfb + noVNC + Chromium/CloakBrowser，MVP 单会话 |
 | Scheduler | 读取配置，给 Listener 分配任务 | Profile 独占锁、过期任务检查 |
 | Listener Worker | CloakBrowser 加载 Profile，打开 X 页面，提取推文 | DOM 监听、网络响应捕获、登录失效检测 |
 | Detail Worker | 消费 raw_tweets，去重，补全信息，入库 | tweet_id 去重 + 数据库唯一约束 |
@@ -189,6 +218,7 @@ flowchart TB
 | `target_account_import_batches` | 批量导入记录 |
 | `monitoring_accounts` | 用于登录监听的 Twitter/X 账号 |
 | `browser_profiles` | CloakBrowser Profile 元数据 |
+| `login_sessions` | 服务器远程浏览器登录会话，保存 noVNC 登录流程状态 |
 | `monitor_lists` | Twitter/X List 或内部监听集合 |
 | `monitor_list_memberships` | 目标账号与 List 映射 |
 | `tweets` | 推文主表 |
@@ -210,3 +240,4 @@ flowchart TB
 |------|------|---------|------|
 | v1.0 | 2026-06-13 | 初始版本（X API + snscrape 方案） | - |
 | v2.0 | 2026-06-13 | 全面改为 CloakBrowser 浏览器监听架构，移除 X API / snscrape 路线，对齐 V1 实施计划 | - |
+| v2.1 | 2026-06-13 | 补充 Phase 2B 服务器远程浏览器登录架构，使用 noVNC 登录会话生成 Browser Profile | - |
