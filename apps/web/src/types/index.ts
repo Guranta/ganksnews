@@ -162,3 +162,84 @@ export interface MonitorListMembership {
 export interface MonitorListMembershipCreate {
   target_account_id: string;
 }
+
+export interface WorkerInfo {
+  id: string;
+  worker_type: string;
+  worker_id: string;
+  status: string;
+  current_task: string | null;
+  metadata_: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkerSummary {
+  worker_type: string;
+  running: number;
+  stopped: number;
+  error: number;
+  total: number;
+  workers: WorkerInfo[];
+}
+
+export interface QueueInfo {
+  stream: string;
+  length: number;
+  groups: ConsumerGroupInfo[];
+}
+
+export interface ConsumerGroupInfo {
+  name: string;
+  pending: number;
+  consumers: number;
+}
+
+export interface DeadLetterEntry {
+  id: string;
+  source_stream: string;
+  original_id: string;
+  error: string;
+  original_data: Record<string, string>;
+  failed_at: string;
+}
+
+export interface WebEventItem {
+  id: string;
+  type: string;
+  payload: unknown;
+  ts: string;
+}
+
+export interface Tweet {
+  id: string;
+  platform: string;
+  tweet_id: string;
+  author_username: string;
+  author_display_name: string | null;
+  text: string | null;
+  url: string | null;
+  posted_at: string | null;
+  like_count: number | null;
+  retweet_count: number | null;
+  reply_count: number | null;
+  quote_count: number | null;
+  view_count: number | null;
+  is_retweet: boolean;
+  is_quote: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LoginSessionItem {
+  id: string;
+  browser_profile_id: string | null;
+  monitoring_account_id: string | null;
+  status: string;
+  vnc_url: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+}

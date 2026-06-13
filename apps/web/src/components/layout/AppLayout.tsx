@@ -6,6 +6,11 @@ import {
   Globe,
   List,
   Activity,
+  Cpu,
+  Layers,
+  Radio,
+  MessageSquare,
+  Monitor,
 } from "lucide-react";
 import {
   Sidebar,
@@ -28,6 +33,11 @@ const navItems = [
   { title: "监控账号", href: "/monitoring-accounts", icon: Eye },
   { title: "浏览器配置", href: "/browser-profiles", icon: Globe },
   { title: "监听列表", href: "/monitor-lists", icon: List },
+  { title: "Workers", href: "/workers", icon: Cpu },
+  { title: "Queues", href: "/queues", icon: Layers },
+  { title: "Events", href: "/events", icon: Radio },
+  { title: "Tweets", href: "/tweets", icon: MessageSquare },
+  { title: "Login Sessions", href: "/login-sessions", icon: Monitor },
 ];
 
 function AppSidebar() {

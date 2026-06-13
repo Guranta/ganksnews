@@ -8,6 +8,8 @@ from app.models.models import (
     BrowserProfileStatus,
     CrawlJob,
     CrawlJobStatus,
+    LoginSession,
+    LoginSessionStatus,
     MonitorList,
     MonitorListMembership,
     MonitoringAccount,

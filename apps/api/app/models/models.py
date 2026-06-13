@@ -296,3 +296,31 @@ class AlertEvent(TimestampMixin, Base):
     payload: Mapped[dict | None] = mapped_column(JSONB)
     is_sent: Mapped[bool] = mapped_column(default=False)
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class LoginSessionStatus(str, enum.Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class LoginSession(TimestampMixin, Base):
+    __tablename__ = "login_sessions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    browser_profile_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("browser_profiles.id")
+    )
+    monitoring_account_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("monitoring_accounts.id")
+    )
+    status: Mapped[LoginSessionStatus] = mapped_column(
+        Enum(LoginSessionStatus), default=LoginSessionStatus.PENDING
+    )
+    vnc_url: Mapped[str | None] = mapped_column(String(512))
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    error_message: Mapped[str | None] = mapped_column(Text)
+    extra_data: Mapped[dict | None] = mapped_column(JSONB)

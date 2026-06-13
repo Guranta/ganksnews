@@ -33,6 +33,13 @@ import type {
   MonitorListMembership,
   MonitorListMembershipCreate,
   TargetAccountStatus,
+  WorkerInfo,
+  WorkerSummary,
+  QueueInfo,
+  DeadLetterEntry,
+  WebEventItem,
+  Tweet,
+  LoginSessionItem,
 } from "@/types";
 
 export const api = {
@@ -107,5 +114,58 @@ export const api = {
       request<MonitorListMembership>(`/monitor-lists/${listId}/members`, { method: "POST", body: JSON.stringify(data) }),
     removeMember: (listId: string, targetAccountId: string) =>
       request<void>(`/monitor-lists/${listId}/members/${targetAccountId}`, { method: "DELETE" }),
+  },
+
+  workers: {
+    list: () => request<WorkerInfo[]>("/workers"),
+    summary: () => request<WorkerSummary[]>("/workers/summary"),
+  },
+
+  queues: {
+    list: () => request<QueueInfo[]>("/queues"),
+    deadLetter: (count?: number) => {
+      const qs = count ? `?count=${count}` : "";
+      return request<DeadLetterEntry[]>(`/queues/dead-letter${qs}`);
+    },
+  },
+
+  events: {
+    recent: (count?: number) => {
+      const qs = count ? `?count=${count}` : "";
+      return request<WebEventItem[]>(`/events/recent${qs}`);
+    },
+    test: (message?: string) => {
+      const qs = message ? `?message=${encodeURIComponent(message)}` : "";
+      return request<{ ok: boolean; stream_id: string }>(`/events/test${qs}`, { method: "POST" });
+    },
+  },
+
+  tweets: {
+    latest: (params?: { page?: number; page_size?: number; author?: string; search?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.page) qs.set("page", String(params.page));
+      if (params?.page_size) qs.set("page_size", String(params.page_size));
+      if (params?.author) qs.set("author", params.author);
+      if (params?.search) qs.set("search", params.search);
+      const s = qs.toString();
+      return request<PaginatedResponse<Tweet>>(`/tweets/latest${s ? `?${s}` : ""}`);
+    },
+    get: (id: string) => request<Tweet>(`/tweets/${id}`),
+  },
+
+  loginSessions: {
+    list: (params?: { page?: number; page_size?: number; status?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.page) qs.set("page", String(params.page));
+      if (params?.page_size) qs.set("page_size", String(params.page_size));
+      if (params?.status) qs.set("status", params.status);
+      const s = qs.toString();
+      return request<PaginatedResponse<LoginSessionItem>>(`/login-sessions${s ? `?${s}` : ""}`);
+    },
+    get: (id: string) => request<LoginSessionItem>(`/login-sessions/${id}`),
+    create: (data: { browser_profile_id?: string; monitoring_account_id?: string }) =>
+      request<LoginSessionItem>("/login-sessions", { method: "POST", body: JSON.stringify(data) }),
+    complete: (id: string) => request<LoginSessionItem>(`/login-sessions/${id}/complete`, { method: "POST" }),
+    cancel: (id: string) => request<LoginSessionItem>(`/login-sessions/${id}/cancel`, { method: "POST" }),
   },
 };
