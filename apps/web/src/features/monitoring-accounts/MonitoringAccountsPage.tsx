@@ -36,7 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Trash2, Pencil, LogIn } from "lucide-react";
+import { Trash2, Pencil, LogIn } from "lucide-react";
 import { formatRelativeTime, statusColor } from "@/lib/format";
 import { toast } from "sonner";
 
