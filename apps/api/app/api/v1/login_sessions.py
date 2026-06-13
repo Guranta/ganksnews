@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from sqlalchemy import select, update
@@ -21,6 +22,7 @@ from app.streams import (
     EVT_LOGIN_SESSION_CREATED,
     EVT_LOGIN_SESSION_RUNNING,
     EVT_PROFILE_AVAILABLE,
+    EVT_PROFILE_NEEDS_LOGIN,
     WEB_EVENTS,
     StreamClient,
 )
@@ -100,7 +102,7 @@ async def complete_login_session(session_id: uuid.UUID):
             await db.execute(
                 update(MonitoringAccount)
                 .where(MonitoringAccount.id == session.monitoring_account_id)
-                .values(status=MonitoringAccountStatus.ACTIVE)
+                .values(status=MonitoringAccountStatus.ACTIVE, last_login_check_at=datetime.now(timezone.utc))
             )
         await db.commit()
 
@@ -132,6 +134,22 @@ async def cancel_login_session(session_id: uuid.UUID):
     session = await service.update_login_session_status(session_id, LoginSessionStatus.CANCELLED)
     if session is None:
         raise HTTPException(status_code=404, detail="Login session not found")
+
+    async with async_session_factory() as db:
+        if session.browser_profile_id:
+            await db.execute(
+                update(BrowserProfile)
+                .where(BrowserProfile.id == session.browser_profile_id)
+                .values(status=BrowserProfileStatus.NEEDS_LOGIN)
+            )
+        if session.monitoring_account_id:
+            await db.execute(
+                update(MonitoringAccount)
+                .where(MonitoringAccount.id == session.monitoring_account_id)
+                .values(status=MonitoringAccountStatus.NEEDS_LOGIN)
+            )
+        await db.commit()
+
     redis = await get_redis()
     client = StreamClient(redis)
     payload = WebEventPayload(
@@ -139,4 +157,12 @@ async def cancel_login_session(session_id: uuid.UUID):
         payload={"session_id": str(session_id), "status": "cancelled"},
     )
     await client.xadd(WEB_EVENTS, encode_payload(payload))
+
+    if session.browser_profile_id:
+        profile_payload = WebEventPayload(
+            type=EVT_PROFILE_NEEDS_LOGIN,
+            payload={"profile_id": str(session.browser_profile_id), "status": "needs_login"},
+        )
+        await client.xadd(WEB_EVENTS, encode_payload(profile_payload))
+
     return session
