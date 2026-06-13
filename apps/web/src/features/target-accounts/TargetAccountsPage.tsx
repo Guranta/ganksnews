@@ -5,6 +5,9 @@ import type { TargetAccount, TargetAccountStatus, TargetAccountCreate, TargetAcc
 import {
   Card,
   CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Upload, Trash2, Pencil } from "lucide-react";
+import { Search, Upload, Trash2, Pencil, Target, UserPlus } from "lucide-react";
 import { formatRelativeTime, statusColor, priorityColor } from "@/lib/format";
 import { toast } from "sonner";
 
@@ -108,15 +111,29 @@ export default function TargetAccountsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">目标账号</h1>
-          <p className="text-muted-foreground">正在监控的 Twitter/X 账号</p>
-        </div>
-        <div className="flex gap-2">
+      <Card className="overflow-hidden border-border/70 bg-gradient-to-br from-card via-card to-muted/40 shadow-sm">
+        <CardHeader className="border-b bg-muted/20">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <Target className="h-6 w-6" />
+              </div>
+              <div>
+                <CardTitle className="text-2xl tracking-tight">目标账号</CardTitle>
+                <CardDescription className="mt-2 max-w-2xl">
+                  管理需要跟踪的公开 Twitter/X 账号。监控账号负责登录，目标账号是被观察的信息源。
+                </CardDescription>
+                <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                  <span className="rounded-full bg-background px-3 py-1 ring-1 ring-border">当前页 {data?.items.length ?? 0} 个</span>
+                  <span className="rounded-full bg-background px-3 py-1 ring-1 ring-border">总计 {data?.total ?? 0} 个</span>
+                  <span className="rounded-full bg-background px-3 py-1 ring-1 ring-border">Twitter/X</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 lg:justify-end">
           <Dialog open={importOpen} onOpenChange={(o) => { setImportOpen(o); if (!o) { setImportText(""); setImportResult(null); } }}>
             <DialogTrigger asChild>
-              <Button variant="outline"><Upload className="h-4 w-4 mr-2" />批量导入</Button>
+                  <Button variant="outline" className="bg-background/80"><Upload className="h-4 w-4 mr-2" />批量导入</Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader>
@@ -159,35 +176,39 @@ export default function TargetAccountsPage() {
 
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-2" />添加账号</Button>
+                  <Button className="shadow-sm"><UserPlus className="h-4 w-4 mr-2" />添加账号</Button>
             </DialogTrigger>
             <CreateTargetDialog onSubmit={(d) => createMutation.mutate(d)} />
           </Dialog>
-        </div>
-      </div>
+            </div>
+          </div>
+        </CardHeader>
 
-      <div className="flex gap-3 items-center">
-        <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="搜索用户名..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="pl-8"
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v as typeof statusFilter); setPage(1); }}>
-          <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder="状态" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">全部</SelectItem>
-            <SelectItem value="active">活跃</SelectItem>
-            <SelectItem value="paused">已暂停</SelectItem>
-            <SelectItem value="archived">已归档</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+        <CardContent className="pt-6">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            <div className="relative flex-1 md:max-w-sm">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="搜索用户名，例如 CNBC"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                className="pl-9"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v as typeof statusFilter); setPage(1); }}>
+              <SelectTrigger className="w-full md:w-[150px]">
+                <SelectValue placeholder="状态" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部状态</SelectItem>
+                <SelectItem value="active">活跃</SelectItem>
+                <SelectItem value="paused">已暂停</SelectItem>
+                <SelectItem value="archived">已归档</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent className="p-0">
