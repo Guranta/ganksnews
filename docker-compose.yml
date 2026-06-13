@@ -121,3 +121,15 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  remote-browser:
+    image: dorowu/ubuntu-desktop-lxde-vnc:latest
+    restart: unless-stopped
+    shm_size: "1gb"
+    expose:
+      - "80"
+    environment:
+      VNC_PASSWORD:
+      RESOLUTION: 1280x720
+    volumes:
+      - ./storage/profiles:/profiles

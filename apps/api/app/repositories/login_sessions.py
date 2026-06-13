@@ -32,6 +32,21 @@ async def list_all(
     return result.scalars().all(), total
 
 
+async def count_by_status(db: AsyncSession, status: LoginSessionStatus) -> int:
+    result = await db.execute(
+        select(func.count()).select_from(LoginSession).where(LoginSession.status == status)
+    )
+    return result.scalar_one()
+
+
+async def find_running_with_token_hash(db: AsyncSession) -> list[LoginSession]:
+    result = await db.execute(
+        select(LoginSession).where(LoginSession.status == LoginSessionStatus.RUNNING)
+    )
+    sessions = result.scalars().all()
+    return [s for s in sessions if s.extra_data and "novnc_token_hash" in s.extra_data]
+
+
 async def create(db: AsyncSession, **kwargs) -> LoginSession:
     session = LoginSession(**kwargs)
     db.add(session)
@@ -44,6 +59,7 @@ async def update_status(
     session_id: uuid.UUID,
     status: LoginSessionStatus,
     error_message: str | None = None,
+    extra_data: dict | None = None,
 ) -> LoginSession | None:
     session = await get_by_id(db, session_id)
     if session is None:
@@ -51,6 +67,8 @@ async def update_status(
     session.status = status
     if error_message:
         session.error_message = error_message
+    if extra_data is not None:
+        session.extra_data = extra_data
     if status == LoginSessionStatus.RUNNING and session.started_at is None:
         session.started_at = datetime.now(timezone.utc)
     if status in (LoginSessionStatus.COMPLETED, LoginSessionStatus.FAILED, LoginSessionStatus.CANCELLED):

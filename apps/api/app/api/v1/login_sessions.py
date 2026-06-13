@@ -1,15 +1,30 @@
 import uuid
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from sqlalchemy import select, update
 
 from app.core.database import async_session_factory
-from app.models import LoginSessionStatus, BrowserProfile, BrowserProfileStatus, MonitoringAccount, MonitoringAccountStatus
+from app.models import (
+    BrowserProfile,
+    BrowserProfileStatus,
+    LoginSessionStatus,
+    MonitoringAccount,
+    MonitoringAccountStatus,
+)
 from app.schemas.common import PaginatedResponse
 from app.schemas.login_sessions import LoginSessionCreate, LoginSessionResponse
 from app.services import login_sessions as service
-from app.streams import StreamClient, WEB_EVENTS, EVT_LOGIN_SESSION_CREATED, EVT_LOGIN_SESSION_COMPLETED, EVT_LOGIN_SESSION_CANCELLED, EVT_PROFILE_AVAILABLE
-from app.streams.messages import encode_payload, WebEventPayload
+from app.services.login_sessions import ConcurrentSessionLimitExceeded
+from app.streams import (
+    EVT_LOGIN_SESSION_CANCELLED,
+    EVT_LOGIN_SESSION_COMPLETED,
+    EVT_LOGIN_SESSION_CREATED,
+    EVT_LOGIN_SESSION_RUNNING,
+    EVT_PROFILE_AVAILABLE,
+    WEB_EVENTS,
+    StreamClient,
+)
+from app.streams.messages import WebEventPayload, encode_payload
 from app.core.redis import get_redis
 
 router = APIRouter()
@@ -27,15 +42,37 @@ async def list_login_sessions(
 
 @router.post("", response_model=LoginSessionResponse, status_code=201)
 async def create_login_session(data: LoginSessionCreate):
-    session = await service.create_login_session(data)
+    try:
+        session = await service.create_login_session(data)
+    except ConcurrentSessionLimitExceeded as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+
     redis = await get_redis()
     client = StreamClient(redis)
-    payload = WebEventPayload(
+
+    created_payload = WebEventPayload(
         type=EVT_LOGIN_SESSION_CREATED,
-        payload={"session_id": str(session.id), "status": session.status.value},
+        payload={"session_id": str(session.id), "status": "pending"},
     )
-    await client.xadd(WEB_EVENTS, encode_payload(payload))
+    await client.xadd(WEB_EVENTS, encode_payload(created_payload))
+
+    running_payload = WebEventPayload(
+        type=EVT_LOGIN_SESSION_RUNNING,
+        payload={"session_id": str(session.id), "status": "running"},
+    )
+    await client.xadd(WEB_EVENTS, encode_payload(running_payload))
+
     return session
+
+
+@router.get("/novnc-auth")
+async def novnc_auth(request: Request, token: str = Query(...)):
+    if not token:
+        raise HTTPException(status_code=401, detail="Token required")
+    valid = await service.validate_novnc_token(token)
+    if not valid:
+        raise HTTPException(status_code=403, detail="Invalid or expired token")
+    return None
 
 
 @router.get("/{session_id}", response_model=LoginSessionResponse)
@@ -57,7 +94,7 @@ async def complete_login_session(session_id: uuid.UUID):
             await db.execute(
                 update(BrowserProfile)
                 .where(BrowserProfile.id == session.browser_profile_id)
-                .values(status=BrowserProfileStatus.ACTIVE)
+                .values(status=BrowserProfileStatus.AVAILABLE)
             )
         if session.monitoring_account_id:
             await db.execute(
@@ -83,7 +120,7 @@ async def complete_login_session(session_id: uuid.UUID):
     if session.browser_profile_id:
         profile_payload = WebEventPayload(
             type=EVT_PROFILE_AVAILABLE,
-            payload={"profile_id": str(session.browser_profile_id), "status": "active"},
+            payload={"profile_id": str(session.browser_profile_id), "status": "available"},
         )
         await client.xadd(WEB_EVENTS, encode_payload(profile_payload))
 

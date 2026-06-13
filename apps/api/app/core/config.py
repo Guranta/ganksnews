@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     SSE_HEARTBEAT_SECONDS: int = 15
     SSE_REPLAY_RECENT_LIMIT: int = 100
 
+    NOVNC_PUBLIC_BASE_URL: str = "/novnc/"
+    LOGIN_SESSION_TOKEN_TTL_SECONDS: int = 1800
+    LOGIN_SESSION_MAX_CONCURRENT: int = 1
+
     TELEGRAM_ENABLED: bool = False
     TELEGRAM_BOT_TOKEN: str = ""
     TELEGRAM_DEFAULT_CHAT_ID: str = ""
