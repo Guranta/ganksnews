@@ -52,14 +52,10 @@ async def create_login_session(data: LoginSessionCreate):
             seconds=settings.LOGIN_SESSION_TOKEN_TTL_SECONDS
         )
 
-        profile_dir = f"/profiles/{uuid.uuid4()}" if not data.browser_profile_id else None
-
         extra_data = {
             "novnc_token_hash": token_hash,
             "novnc_expires_at": expires_at.isoformat(),
         }
-        if profile_dir:
-            extra_data["profile_dir"] = profile_dir
 
         vnc_url = _build_vnc_url(uuid.uuid4(), raw_token)
 

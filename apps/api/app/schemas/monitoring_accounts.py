@@ -1,9 +1,13 @@
+from __future__ import annotations
+
 import uuid
 from datetime import datetime
 
 from pydantic import BaseModel
 
-from app.models import MonitoringAccountStatus
+from app.models import BrowserProfileStatus, MonitoringAccountStatus
+from app.schemas.browser_profiles import BrowserProfileResponse
+from app.schemas.login_sessions import LoginSessionResponse
 
 
 class MonitoringAccountCreate(BaseModel):
@@ -30,3 +34,16 @@ class MonitoringAccountResponse(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class MonitoringAccountWithLoginSessionCreate(BaseModel):
+    username: str
+    display_name: str | None = None
+    notes: str | None = None
+
+
+class MonitoringAccountWithLoginSessionResponse(BaseModel):
+    account: MonitoringAccountResponse
+    browser_profile: BrowserProfileResponse
+    login_session: LoginSessionResponse
+    vnc_url: str | None
