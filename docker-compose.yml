@@ -50,7 +50,7 @@ services:
       dockerfile: docker/web.Dockerfile
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "18080:80"
     depends_on:
       - api
 

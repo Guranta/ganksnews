@@ -23,7 +23,7 @@ async def upsert_heartbeat(
             worker_id=worker_id,
             status=status,
             current_task=current_task,
-            metadata_=metadata,
+            metadata=metadata,
             updated_at=now,
         )
         stmt = stmt.on_conflict_do_update(
@@ -31,7 +31,7 @@ async def upsert_heartbeat(
             set_={
                 "status": stmt.excluded.status,
                 "current_task": stmt.excluded.current_task,
-                "metadata_": metadata,
+                "metadata": metadata,
                 "updated_at": stmt.excluded.updated_at,
             },
         )
