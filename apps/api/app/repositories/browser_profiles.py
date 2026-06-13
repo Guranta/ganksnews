@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import func, select
+from sqlalchemy import delete as sql_delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import BrowserProfile
@@ -47,4 +47,11 @@ async def update(db: AsyncSession, profile: BrowserProfile, **kwargs) -> Browser
 
 async def delete(db: AsyncSession, profile: BrowserProfile) -> None:
     await db.delete(profile)
+    await db.flush()
+
+
+async def delete_by_monitoring_account(db: AsyncSession, monitoring_account_id: uuid.UUID) -> None:
+    await db.execute(
+        sql_delete(BrowserProfile).where(BrowserProfile.monitoring_account_id == monitoring_account_id)
+    )
     await db.flush()

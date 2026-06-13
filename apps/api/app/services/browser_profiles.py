@@ -2,6 +2,7 @@ import uuid
 
 from app.core.database import async_session_factory
 from app.repositories import browser_profiles as repo
+from app.repositories import login_sessions as ls_repo
 from app.schemas.browser_profiles import BrowserProfileCreate, BrowserProfileUpdate
 
 
@@ -37,6 +38,7 @@ async def delete_browser_profile(profile_id: uuid.UUID):
         profile = await repo.get_by_id(db, profile_id)
         if profile is None:
             return False
+        await ls_repo.delete_by_browser_profile(db, profile_id)
         await repo.delete(db, profile)
         await db.commit()
         return True

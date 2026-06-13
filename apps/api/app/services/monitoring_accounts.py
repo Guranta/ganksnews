@@ -164,6 +164,8 @@ async def delete_monitoring_account(account_id: uuid.UUID):
         account = await repo.get_by_id(db, account_id)
         if account is None:
             return False
+        await ls_repo.delete_by_monitoring_account(db, account_id)
+        await bp_repo.delete_by_monitoring_account(db, account_id)
         await repo.delete(db, account)
         await db.commit()
         return True

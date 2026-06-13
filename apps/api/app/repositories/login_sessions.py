@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import LoginSession, LoginSessionStatus
@@ -75,3 +75,17 @@ async def update_status(
         session.completed_at = datetime.now(timezone.utc)
     await db.flush()
     return session
+
+
+async def delete_by_monitoring_account(db: AsyncSession, monitoring_account_id: uuid.UUID) -> None:
+    await db.execute(
+        delete(LoginSession).where(LoginSession.monitoring_account_id == monitoring_account_id)
+    )
+    await db.flush()
+
+
+async def delete_by_browser_profile(db: AsyncSession, browser_profile_id: uuid.UUID) -> None:
+    await db.execute(
+        delete(LoginSession).where(LoginSession.browser_profile_id == browser_profile_id)
+    )
+    await db.flush()
