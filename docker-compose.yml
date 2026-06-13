@@ -1,0 +1,138 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-littleganknews}
+      POSTGRES_USER: ${POSTGRES_USER:-littleganknews}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./storage/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-littleganknews}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./storage/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-8000}:8000"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-littleganknews}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-littleganknews}
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./storage/artifacts:/app/storage/artifacts
+      - ./storage/profiles:/app/storage/profiles
+      - ./storage/logs:/app/storage/logs
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-5173}:80"
+    depends_on:
+      - api
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/worker.Dockerfile
+    restart: unless-stopped
+    command: ["python", "-m", "app.workers.scheduler"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-littleganknews}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-littleganknews}
+      REDIS_URL: redis://redis:6379/0
+      WORKER_TYPE: scheduler
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./storage/artifacts:/app/storage/artifacts
+      - ./storage/profiles:/app/storage/profiles
+
+  listener:
+    build:
+      context: .
+      dockerfile: docker/worker.Dockerfile
+    restart: unless-stopped
+    command: ["python", "-m", "app.workers.listener"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-littleganknews}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-littleganknews}
+      REDIS_URL: redis://redis:6379/0
+      WORKER_TYPE: listener
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./storage/artifacts:/app/storage/artifacts
+      - ./storage/profiles:/app/storage/profiles
+
+  detail:
+    build:
+      context: .
+      dockerfile: docker/worker.Dockerfile
+    restart: unless-stopped
+    command: ["python", "-m", "app.workers.detail"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-littleganknews}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-littleganknews}
+      REDIS_URL: redis://redis:6379/0
+      WORKER_TYPE: detail
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./storage/artifacts:/app/storage/artifacts
+      - ./storage/profiles:/app/storage/profiles
+
+  health:
+    build:
+      context: .
+      dockerfile: docker/worker.Dockerfile
+    restart: unless-stopped
+    command: ["python", "-m", "app.workers.health"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-littleganknews}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-littleganknews}
+      REDIS_URL: redis://redis:6379/0
+      WORKER_TYPE: health
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
