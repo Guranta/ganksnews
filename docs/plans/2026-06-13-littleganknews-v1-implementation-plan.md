@@ -542,6 +542,8 @@ TELEGRAM_DEFAULT_CHAT_ID=
 - Scheduler / Health Worker。
 - SSE `/events/stream`。
 - 前端通知中心。
+- Tweets API。
+- Latest Tweets / 最新推文页面，展示数据库中的推文并支持 SSE 实时插入。
 - Profile lock 和健康检查。
 - Login Session API。
 - noVNC 服务器浏览器登录会话，用于生成 Browser Profile。
@@ -551,6 +553,8 @@ TELEGRAM_DEFAULT_CHAT_ID=
 - Worker 状态可在前端查看。
 - 队列状态可在前端查看。
 - 测试事件可通过 SSE 推送到前端。
+- 已入库推文可通过 Latest Tweets 页面查看。
+- `tweet.new` 事件可实时插入 Latest Tweets 页面。
 
 ### Phase 3：CloakBrowser 单 Profile PoC
 

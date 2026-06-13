@@ -7,6 +7,7 @@ flowchart LR
     subgraph Web[Frontend]
         UI[Vite React Dashboard]
         SSEClient[SSE Client]
+        LatestTweets[Latest Tweets UI]
         LoginUI[Login Session UI]
     end
 
@@ -48,6 +49,7 @@ flowchart LR
     X[Twitter/X Web]
 
     UI --> FastAPI
+    LatestTweets --> FastAPI
     SSEClient --> SSE
     LoginUI --> LoginSessions
     FastAPI --> PG
@@ -66,6 +68,7 @@ flowchart LR
     Detail --> WebEvents
     Detail --> Artifacts
     WebEvents --> SSE
+    SSE --> LatestTweets
     Health --> PG
     Health --> Redis
     DeadLetter --> FastAPI
@@ -84,6 +87,7 @@ sequenceDiagram
     participant D as Detail Worker
     participant DB as PostgreSQL
     participant SSE as SSE Endpoint
+    participant LT as Latest Tweets Page
     participant UI as Frontend
 
     S->>L: 分配目标账号 + Profile
@@ -97,6 +101,7 @@ sequenceDiagram
     D->>DB: 写入推文
     D->>SSE: 写入 web_events
     SSE-->>UI: 实时推送新推文
+    SSE-->>LT: tweet.new 实时插入列表顶部
 ```
 
 ## 3. 账号与 Profile 工作流
@@ -181,6 +186,7 @@ Xvfb + noVNC + Chromium]
 | 模块 | 职责 | 关键点 |
 |------|------|--------|
 | FastAPI API | REST API + SSE，账号/Profile/推文管理 | CRUD + 批量导入 + SSE 推送 |
+| Latest Tweets UI | 展示最新入库推文 | `/tweets` 页面，SSE `tweet.new` 实时插入 |
 | Login Sessions API | 创建服务器远程浏览器登录会话 | noVNC 短期 token、完成/取消、状态事件 |
 | Remote Browser | 提供服务器侧可交互浏览器 | Xvfb + noVNC + Chromium/CloakBrowser，MVP 单会话 |
 | Scheduler | 读取配置，给 Listener 分配任务 | Profile 独占锁、过期任务检查 |
@@ -241,3 +247,4 @@ Xvfb + noVNC + Chromium]
 | v1.0 | 2026-06-13 | 初始版本（X API + snscrape 方案） | - |
 | v2.0 | 2026-06-13 | 全面改为 CloakBrowser 浏览器监听架构，移除 X API / snscrape 路线，对齐 V1 实施计划 | - |
 | v2.1 | 2026-06-13 | 补充 Phase 2B 服务器远程浏览器登录架构，使用 noVNC 登录会话生成 Browser Profile | - |
+| v2.2 | 2026-06-13 | 明确 Latest Tweets 页面和 Tweets API 为推文展示入口，SSE `tweet.new` 实时插入 | - |

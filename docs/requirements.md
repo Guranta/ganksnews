@@ -44,6 +44,7 @@
 | F-015 | 原始推文数据持久化存储（PostgreSQL） | P0 | 长期存档 |
 | F-016 | 支持按用户、时间检索 | P0 | Phase 1 基础查询 |
 | F-017 | 数据可视化仪表盘 | P0 | Phase 1 做 Dashboard 汇总 |
+| F-017A | 最新推文页面 | P0 | Latest Tweets 页面展示已入库推文，SSE `tweet.new` 实时插入 |
 | F-018 | 数据导出（CSV/JSON） | P2 | Phase 1 不做 |
 | F-019 | 数据保留策略（Artifacts 保留天数） | P1 | 避免磁盘爆满 |
 
@@ -145,6 +146,7 @@
 - 支持目标账号批量导入。
 - 支持监听账号和 Browser Profile 的网页端登记、暂停、恢复、状态查看。
 - 支持推文去重、入库、查询、搜索基础能力。
+- 支持 Latest Tweets / 最新推文页面展示已入库推文，并通过 SSE 实时插入新推文。
 - 支持 Worker 心跳、Redis Stream 队列状态、错误证据查看。
 - 支持网页端 SSE 实时通知。
 - 预留 Telegram 表结构和接口扩展点，但 Phase 1 不实现。
@@ -170,3 +172,4 @@
 | v1.0 | 2026-06-13 | 初始版本 | - |
 | v2.0 | 2026-06-13 | 废弃 X API / snscrape 方案，改为 CloakBrowser 浏览器监听方案，对齐 V1 实施计划 | - |
 | v2.1 | 2026-06-13 | 补充 Phase 2B noVNC 服务器浏览器登录会话方向 | - |
+| v2.2 | 2026-06-13 | 明确 Latest Tweets 页面作为推文展示入口，支持 Tweets API 和 SSE 实时插入 | - |
