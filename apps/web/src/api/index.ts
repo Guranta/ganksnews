@@ -24,6 +24,7 @@ import type {
   TargetAccountBulkImportResponse,
   MonitoringAccount,
   MonitoringAccountCreate,
+  MonitoringAccountWithLoginSessionCreate,
   MonitoringAccountUpdate,
   MonitoringAccountWithLoginSessionResponse,
   BrowserProfile,
@@ -83,7 +84,7 @@ export const api = {
     },
     create: (data: MonitoringAccountCreate) =>
       request<MonitoringAccount>("/monitoring-accounts", { method: "POST", body: JSON.stringify(data) }),
-    createWithLoginSession: (data: MonitoringAccountCreate) =>
+    createWithLoginSession: (data: MonitoringAccountWithLoginSessionCreate) =>
       request<MonitoringAccountWithLoginSessionResponse>("/monitoring-accounts/with-login-session", { method: "POST", body: JSON.stringify(data) }),
     update: (id: string, data: MonitoringAccountUpdate) =>
       request<MonitoringAccount>(`/monitoring-accounts/${id}`, { method: "PATCH", body: JSON.stringify(data) }),

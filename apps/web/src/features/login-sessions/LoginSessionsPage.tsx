@@ -90,12 +90,15 @@ export default function LoginSessionsPage() {
         browser_profile_id: selectedProfileId && selectedProfileId !== "none" ? selectedProfileId : undefined,
         monitoring_account_id: selectedAccountId && selectedAccountId !== "none" ? selectedAccountId : undefined,
       }),
-    onSuccess: () => {
+    onSuccess: (resp) => {
       queryClient.invalidateQueries({ queryKey: ["login-sessions"] });
       setDialogOpen(false);
       setSelectedProfileId("");
       setSelectedAccountId("");
       toast.success("Login session 已创建，远程浏览器已启动");
+      if (resp?.vnc_url) {
+        window.open(resp.vnc_url, "_blank", "noopener,noreferrer");
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   });

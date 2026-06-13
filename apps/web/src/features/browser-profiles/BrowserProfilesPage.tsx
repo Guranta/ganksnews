@@ -38,6 +38,14 @@ import { Plus, Trash2, Pencil } from "lucide-react";
 import { formatRelativeTime, statusColor } from "@/lib/format";
 import { toast } from "sonner";
 
+const PROFILE_STATUS_LABELS: Record<string, string> = {
+  available: "可用",
+  in_use: "使用中",
+  needs_login: "需要登录",
+  error: "异常",
+  unregistered: "未注册",
+};
+
 export default function BrowserProfilesPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
@@ -133,7 +141,7 @@ export default function BrowserProfilesPage() {
                     <TableCell className="font-medium">{p.name}</TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground max-w-xs truncate">{p.profile_path}</TableCell>
                     <TableCell><Badge variant="outline">{p.provider}</Badge></TableCell>
-                    <TableCell><Badge variant={statusColor(p.status)}>{p.status}</Badge></TableCell>
+                    <TableCell><Badge variant={statusColor(p.status)}>{PROFILE_STATUS_LABELS[p.status] || p.status}</Badge></TableCell>
                     <TableCell className="text-muted-foreground text-sm">{formatRelativeTime(p.last_health_check_at)}</TableCell>
                     <TableCell className="text-sm">{p.locked_by || "—"}</TableCell>
                     <TableCell>

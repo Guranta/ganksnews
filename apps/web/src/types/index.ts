@@ -91,6 +91,12 @@ export interface MonitoringAccountCreate {
   notes?: string;
 }
 
+export interface MonitoringAccountWithLoginSessionCreate {
+  username: string;
+  display_name?: string;
+  notes?: string;
+}
+
 export interface MonitoringAccountUpdate {
   display_name?: string;
   status?: MonitoringAccountStatus;

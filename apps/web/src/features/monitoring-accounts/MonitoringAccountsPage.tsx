@@ -41,10 +41,10 @@ import { formatRelativeTime, statusColor } from "@/lib/format";
 import { toast } from "sonner";
 
 const STATUS_LABELS: Record<string, string> = {
-  active: "活跃",
-  needs_login: "待登录",
-  challenged: "被验证",
-  suspended: "被封禁",
+  active: "已登录",
+  needs_login: "需要登录",
+  challenged: "需验证",
+  suspended: "已封禁",
   inactive: "未激活",
 };
 
@@ -288,10 +288,10 @@ function EditMonitoringForm({ account, onSubmit }: { account: MonitoringAccount;
           <Select value={status} onValueChange={(v) => setStatus(v as MonitoringAccountStatus)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="active">活跃</SelectItem>
-              <SelectItem value="needs_login">待登录</SelectItem>
-              <SelectItem value="challenged">被验证</SelectItem>
-              <SelectItem value="suspended">被封禁</SelectItem>
+              <SelectItem value="active">已登录</SelectItem>
+              <SelectItem value="needs_login">需要登录</SelectItem>
+              <SelectItem value="challenged">需验证</SelectItem>
+              <SelectItem value="suspended">已封禁</SelectItem>
               <SelectItem value="inactive">未激活</SelectItem>
             </SelectContent>
           </Select>
