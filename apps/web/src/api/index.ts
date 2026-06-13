@@ -25,6 +25,7 @@ import type {
   MonitoringAccount,
   MonitoringAccountCreate,
   MonitoringAccountUpdate,
+  MonitoringAccountWithLoginSessionResponse,
   BrowserProfile,
   BrowserProfileCreate,
   BrowserProfileUpdate,
@@ -82,6 +83,8 @@ export const api = {
     },
     create: (data: MonitoringAccountCreate) =>
       request<MonitoringAccount>("/monitoring-accounts", { method: "POST", body: JSON.stringify(data) }),
+    createWithLoginSession: (data: MonitoringAccountCreate) =>
+      request<MonitoringAccountWithLoginSessionResponse>("/monitoring-accounts/with-login-session", { method: "POST", body: JSON.stringify(data) }),
     update: (id: string, data: MonitoringAccountUpdate) =>
       request<MonitoringAccount>(`/monitoring-accounts/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     delete: (id: string) =>

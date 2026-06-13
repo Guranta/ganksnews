@@ -93,7 +93,7 @@ export default function BrowserProfilesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">浏览器配置</h1>
-          <p className="text-muted-foreground">CloakBrowser 持久化配置管理</p>
+          <p className="text-muted-foreground">CloakBrowser 持久化配置管理 — 通过「监控账号」页面「添加并登录」可自动创建</p>
         </div>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>

@@ -97,6 +97,13 @@ export interface MonitoringAccountUpdate {
   notes?: string;
 }
 
+export interface MonitoringAccountWithLoginSessionResponse {
+  account: MonitoringAccount;
+  browser_profile: BrowserProfile;
+  login_session: LoginSessionItem;
+  vnc_url: string | null;
+}
+
 export type BrowserProfileStatus = "available" | "in_use" | "needs_login" | "error" | "unregistered";
 
 export interface BrowserProfile {

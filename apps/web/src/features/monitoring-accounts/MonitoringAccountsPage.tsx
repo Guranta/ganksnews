@@ -26,6 +26,7 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Table,
@@ -35,9 +36,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Trash2, Pencil } from "lucide-react";
+import { Plus, Trash2, Pencil, LogIn } from "lucide-react";
 import { formatRelativeTime, statusColor } from "@/lib/format";
 import { toast } from "sonner";
+
+const STATUS_LABELS: Record<string, string> = {
+  active: "活跃",
+  needs_login: "待登录",
+  challenged: "被验证",
+  suspended: "被封禁",
+  inactive: "未激活",
+};
 
 export default function MonitoringAccountsPage() {
   const queryClient = useQueryClient();
@@ -57,6 +66,22 @@ export default function MonitoringAccountsPage() {
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       setCreateOpen(false);
       toast.success("监控账号已创建");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const createWithLoginMutation = useMutation({
+    mutationFn: (data: MonitoringAccountCreate) => api.monitoringAccounts.createWithLoginSession(data),
+    onSuccess: (resp) => {
+      queryClient.invalidateQueries({ queryKey: ["monitoring-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["browser-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["login-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      setCreateOpen(false);
+      toast.success("监控账号已创建，远程浏览器已启动");
+      if (resp.vnc_url) {
+        window.open(resp.vnc_url, "_blank");
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -93,10 +118,14 @@ export default function MonitoringAccountsPage() {
         </div>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4 mr-2" />添加账号</Button>
+            <Button><LogIn className="h-4 w-4 mr-2" />添加并登录</Button>
           </DialogTrigger>
           <DialogContent>
-            <CreateMonitoringForm onSubmit={(d) => createMutation.mutate(d)} />
+            <CreateMonitoringForm
+              onSubmit={(d) => createWithLoginMutation.mutate(d)}
+              onSkipLogin={(d) => createMutation.mutate(d)}
+              isLoading={createWithLoginMutation.isPending || createMutation.isPending}
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -128,7 +157,7 @@ export default function MonitoringAccountsPage() {
                       </a>
                     </TableCell>
                     <TableCell>{acc.display_name || "—"}</TableCell>
-                    <TableCell><Badge variant={statusColor(acc.status)}>{acc.status}</Badge></TableCell>
+                    <TableCell><Badge variant={statusColor(acc.status)}>{STATUS_LABELS[acc.status] || acc.status}</Badge></TableCell>
                     <TableCell className="text-muted-foreground text-sm">{formatRelativeTime(acc.last_login_check_at)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground max-w-xs truncate">{acc.notes || "—"}</TableCell>
                     <TableCell>
@@ -186,15 +215,28 @@ export default function MonitoringAccountsPage() {
   );
 }
 
-function CreateMonitoringForm({ onSubmit }: { onSubmit: (data: MonitoringAccountCreate) => void }) {
+function CreateMonitoringForm({ onSubmit, onSkipLogin, isLoading }: {
+  onSubmit: (data: MonitoringAccountCreate) => void;
+  onSkipLogin: (data: MonitoringAccountCreate) => void;
+  isLoading: boolean;
+}) {
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [notes, setNotes] = useState("");
 
+  const formData: MonitoringAccountCreate = {
+    username,
+    display_name: displayName || undefined,
+    notes: notes || undefined,
+  };
+
   return (
     <>
       <DialogHeader>
-        <DialogTitle>添加监控账号</DialogTitle>
+        <DialogTitle>添加并登录监控账号</DialogTitle>
+        <DialogDescription>
+          输入用户名后点击"添加并登录"，系统将自动创建账号、浏览器配置和远程登录会话，然后打开远程浏览器供你完成 X/Twitter 登录。
+        </DialogDescription>
       </DialogHeader>
       <div className="space-y-4">
         <div className="space-y-2">
@@ -210,8 +252,20 @@ function CreateMonitoringForm({ onSubmit }: { onSubmit: (data: MonitoringAccount
           <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </div>
       </div>
-      <DialogFooter>
-        <Button onClick={() => onSubmit({ username, display_name: displayName || undefined, notes: notes || undefined })}>创建</Button>
+      <DialogFooter className="flex gap-2 sm:justify-between">
+        <Button
+          variant="outline"
+          onClick={() => onSkipLogin(formData)}
+          disabled={isLoading}
+        >
+          仅创建账号
+        </Button>
+        <Button
+          onClick={() => onSubmit(formData)}
+          disabled={isLoading || !username.trim()}
+        >
+          {isLoading ? "创建中..." : "添加并登录"}
+        </Button>
       </DialogFooter>
     </>
   );
@@ -235,7 +289,7 @@ function EditMonitoringForm({ account, onSubmit }: { account: MonitoringAccount;
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="active">活跃</SelectItem>
-              <SelectItem value="needs_login">需要登录</SelectItem>
+              <SelectItem value="needs_login">待登录</SelectItem>
               <SelectItem value="challenged">被验证</SelectItem>
               <SelectItem value="suspended">被封禁</SelectItem>
               <SelectItem value="inactive">未激活</SelectItem>
