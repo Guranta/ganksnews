@@ -27,6 +27,9 @@ import type {
   MonitoringAccountWithLoginSessionCreate,
   MonitoringAccountUpdate,
   MonitoringAccountWithLoginSessionResponse,
+  CookieImportRequest,
+  CookieImportResponse,
+  MonitoringAccountHealthCheckResponse,
   BrowserProfile,
   BrowserProfileCreate,
   BrowserProfileUpdate,
@@ -86,6 +89,10 @@ export const api = {
       request<MonitoringAccount>("/monitoring-accounts", { method: "POST", body: JSON.stringify(data) }),
     createWithLoginSession: (data: MonitoringAccountWithLoginSessionCreate) =>
       request<MonitoringAccountWithLoginSessionResponse>("/monitoring-accounts/with-login-session", { method: "POST", body: JSON.stringify(data) }),
+    importCookies: (id: string, data: CookieImportRequest) =>
+      request<CookieImportResponse>(`/monitoring-accounts/${id}/cookies/import`, { method: "POST", body: JSON.stringify(data) }),
+    healthCheck: (id: string) =>
+      request<MonitoringAccountHealthCheckResponse>(`/monitoring-accounts/${id}/health-check`, { method: "POST" }),
     update: (id: string, data: MonitoringAccountUpdate) =>
       request<MonitoringAccount>(`/monitoring-accounts/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     delete: (id: string) =>

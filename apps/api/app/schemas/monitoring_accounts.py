@@ -47,3 +47,31 @@ class MonitoringAccountWithLoginSessionResponse(BaseModel):
     browser_profile: BrowserProfileResponse
     login_session: LoginSessionResponse
     vnc_url: str | None
+
+
+class CookieImportRequest(BaseModel):
+    cookies: list[dict]
+    source: str | None = None
+    notes: str | None = None
+
+
+class LoginHealthResponse(BaseModel):
+    status: MonitoringAccountStatus
+    profile_status: BrowserProfileStatus
+    reason: str
+    checked_at: datetime
+    final_url: str | None = None
+    http_status: int | None = None
+    duration_ms: int | None = None
+
+
+class CookieImportResponse(BaseModel):
+    account: MonitoringAccountResponse
+    browser_profile: BrowserProfileResponse
+    health_check: LoginHealthResponse
+
+
+class MonitoringAccountHealthCheckResponse(BaseModel):
+    account: MonitoringAccountResponse
+    browser_profile: BrowserProfileResponse
+    health_check: LoginHealthResponse

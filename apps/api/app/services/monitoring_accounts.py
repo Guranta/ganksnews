@@ -1,11 +1,16 @@
 import hashlib
+import json
 import logging
 import secrets
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 from sqlalchemy.exc import IntegrityError
 
+from app.browser.cookies import BrowserCookie, cookie_fingerprint, parse_cookie_import
+from app.browser.health import apply_login_health_result, check_twitter_cookie_login_state
+from app.browser.storage_state import write_imported_cookies, write_storage_state
 from app.core.config import settings
 from app.core.database import async_session_factory
 from app.models import BrowserProfileStatus, LoginSessionStatus, MonitoringAccountStatus
@@ -17,7 +22,19 @@ from app.schemas.monitoring_accounts import MonitoringAccountCreate, MonitoringA
 logger = logging.getLogger(__name__)
 
 
-class MonitoringAccountAlreadyExists(Exception):
+class MonitoringAccountAlreadyExists(Exception):  # noqa: N818
+    pass
+
+
+class MonitoringAccountNotFound(Exception):  # noqa: N818
+    pass
+
+
+class BrowserProfileNotFound(Exception):  # noqa: N818
+    pass
+
+
+class CookieStateNotFound(Exception):  # noqa: N818
     pass
 
 
@@ -64,6 +81,14 @@ async def create_monitoring_account(data: MonitoringAccountCreate):
 
         try:
             account = await repo.create(db, **create_kwargs)
+            await bp_repo.create(
+                db,
+                name=f"twitter:@{username}",
+                profile_path=f"{settings.BROWSER_PROFILES_DIR}/twitter/{account.id}",
+                monitoring_account_id=account.id,
+                status=BrowserProfileStatus.UNREGISTERED,
+                provider=settings.BROWSER_PROVIDER,
+            )
             await db.commit()
         except IntegrityError:
             await db.rollback()
@@ -73,6 +98,68 @@ async def create_monitoring_account(data: MonitoringAccountCreate):
 
         logger.info("Monitoring account created id=%s username=%s status=needs_login", account.id, username)
         return account
+
+
+async def import_monitoring_account_cookies(account_id: uuid.UUID, payload: dict):
+    cookies = parse_cookie_import(payload)
+
+    async with async_session_factory() as db:
+        account = await repo.get_by_id(db, account_id)
+        if account is None:
+            raise MonitoringAccountNotFound("Monitoring account not found")
+
+        profile = await bp_repo.get_by_monitoring_account(db, account.id)
+        if profile is None:
+            profile = await bp_repo.create(
+                db,
+                name=f"twitter:@{account.username}",
+                profile_path=f"{settings.BROWSER_PROFILES_DIR}/twitter/{account.id}",
+                monitoring_account_id=account.id,
+                status=BrowserProfileStatus.UNREGISTERED,
+                provider=settings.BROWSER_PROVIDER,
+            )
+
+        profile.status = BrowserProfileStatus.IN_USE
+        await db.flush()
+
+        write_imported_cookies(profile, cookies)
+        storage_state_path = write_storage_state(profile, cookies)
+        result = await check_twitter_cookie_login_state(profile, cookies)
+        apply_login_health_result(account, profile, result)
+        await db.commit()
+
+        logger.info(
+            "Imported Twitter/X cookies account=%s profile=%s cookie_count=%s fingerprint=%s "
+            "storage_state=%s health=%s reason=%s",
+            account.id,
+            profile.id,
+            len(cookies),
+            cookie_fingerprint(cookies)[:19],
+            storage_state_path,
+            result.status.value,
+            result.reason,
+        )
+        return account, profile, result
+
+
+async def check_monitoring_account_login_state(account_id: uuid.UUID):
+    async with async_session_factory() as db:
+        account = await repo.get_by_id(db, account_id)
+        if account is None:
+            raise MonitoringAccountNotFound("Monitoring account not found")
+
+        profile = await bp_repo.get_by_monitoring_account(db, account.id)
+        if profile is None:
+            raise BrowserProfileNotFound("Browser profile not found")
+
+        cookies = _read_imported_cookies(profile.profile_path)
+        profile.status = BrowserProfileStatus.IN_USE
+        await db.flush()
+
+        result = await check_twitter_cookie_login_state(profile, cookies)
+        apply_login_health_result(account, profile, result)
+        await db.commit()
+        return account, profile, result
 
 
 async def create_monitoring_account_with_login_session(data: MonitoringAccountCreate):
@@ -117,7 +204,7 @@ async def create_monitoring_account_with_login_session(data: MonitoringAccountCr
 
         raw_token = secrets.token_urlsafe(32)
         token_hash = _hash_token(raw_token)
-        expires_at = datetime.now(timezone.utc) + timedelta(
+        expires_at = datetime.now(UTC) + timedelta(
             seconds=settings.LOGIN_SESSION_TOKEN_TTL_SECONDS
         )
         extra_data = {
@@ -130,7 +217,7 @@ async def create_monitoring_account_with_login_session(data: MonitoringAccountCr
             browser_profile_id=profile.id,
             monitoring_account_id=account.id,
             status=LoginSessionStatus.RUNNING,
-            started_at=datetime.now(timezone.utc),
+            started_at=datetime.now(UTC),
             vnc_url=_build_vnc_url(uuid.uuid4(), raw_token),
             extra_data=extra_data,
         )
@@ -170,3 +257,14 @@ async def delete_monitoring_account(account_id: uuid.UUID):
         await repo.delete(db, account)
         await db.commit()
         return True
+
+
+def _read_imported_cookies(profile_path: str) -> list[BrowserCookie]:
+    path = Path(profile_path) / "cookies.imported.json"
+    if not path.exists():
+        raise CookieStateNotFound("No imported cookies found for this monitoring account")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        return [BrowserCookie(**cookie) for cookie in payload["cookies"]]
+    except (KeyError, TypeError, json.JSONDecodeError) as exc:
+        raise CookieStateNotFound("Imported cookie state is invalid") from exc

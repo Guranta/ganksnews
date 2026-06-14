@@ -1,6 +1,7 @@
 import uuid
 
-from sqlalchemy import delete as sql_delete, func, select
+from sqlalchemy import delete as sql_delete
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import BrowserProfile
@@ -8,6 +9,16 @@ from app.models import BrowserProfile
 
 async def get_by_id(db: AsyncSession, profile_id: uuid.UUID) -> BrowserProfile | None:
     result = await db.execute(select(BrowserProfile).where(BrowserProfile.id == profile_id))
+    return result.scalar_one_or_none()
+
+
+async def get_by_monitoring_account(db: AsyncSession, monitoring_account_id: uuid.UUID) -> BrowserProfile | None:
+    result = await db.execute(
+        select(BrowserProfile)
+        .where(BrowserProfile.monitoring_account_id == monitoring_account_id)
+        .order_by(BrowserProfile.created_at.desc())
+        .limit(1)
+    )
     return result.scalar_one_or_none()
 
 

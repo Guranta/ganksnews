@@ -110,6 +110,34 @@ export interface MonitoringAccountWithLoginSessionResponse {
   vnc_url: string | null;
 }
 
+export interface LoginHealthResult {
+  status: MonitoringAccountStatus;
+  profile_status: BrowserProfileStatus;
+  reason: string;
+  checked_at: string;
+  final_url: string | null;
+  http_status: number | null;
+  duration_ms: number | null;
+}
+
+export interface CookieImportRequest {
+  cookies: Record<string, unknown>[];
+  source?: string;
+  notes?: string;
+}
+
+export interface CookieImportResponse {
+  account: MonitoringAccount;
+  browser_profile: BrowserProfile;
+  health_check: LoginHealthResult;
+}
+
+export interface MonitoringAccountHealthCheckResponse {
+  account: MonitoringAccount;
+  browser_profile: BrowserProfile;
+  health_check: LoginHealthResult;
+}
+
 export type BrowserProfileStatus = "available" | "in_use" | "needs_login" | "error" | "unregistered";
 
 export interface BrowserProfile {

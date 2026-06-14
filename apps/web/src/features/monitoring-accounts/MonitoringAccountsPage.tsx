@@ -36,7 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trash2, Pencil, LogIn } from "lucide-react";
+import { CookieIcon, Pencil, RefreshCw, Trash2, UserPlus } from "lucide-react";
 import { formatRelativeTime, statusColor } from "@/lib/format";
 import { toast } from "sonner";
 
@@ -53,6 +53,7 @@ export default function MonitoringAccountsPage() {
   const [page, setPage] = useState(1);
   const [createOpen, setCreateOpen] = useState(false);
   const [editAcc, setEditAcc] = useState<MonitoringAccount | null>(null);
+  const [cookieAcc, setCookieAcc] = useState<MonitoringAccount | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["monitoring-accounts", page],
@@ -63,9 +64,10 @@ export default function MonitoringAccountsPage() {
     mutationFn: (data: MonitoringAccountCreate) => api.monitoringAccounts.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["monitoring-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["browser-profiles"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       setCreateOpen(false);
-      toast.success("监控账号已创建");
+      toast.success("监控账号已创建，请导入 Cookie 完成登录态检查");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -107,6 +109,29 @@ export default function MonitoringAccountsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const importCookieMutation = useMutation({
+    mutationFn: ({ id, cookies }: { id: string; cookies: Record<string, unknown>[] }) =>
+      api.monitoringAccounts.importCookies(id, { cookies, source: "manual_export" }),
+    onSuccess: (resp) => {
+      queryClient.invalidateQueries({ queryKey: ["monitoring-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["browser-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      setCookieAcc(null);
+      toast.success(`Cookie 已导入，检查结果：${resp.health_check.reason}`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const healthCheckMutation = useMutation({
+    mutationFn: (id: string) => api.monitoringAccounts.healthCheck(id),
+    onSuccess: (resp) => {
+      queryClient.invalidateQueries({ queryKey: ["monitoring-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["browser-profiles"] });
+      toast.success(`登录态检查完成：${resp.health_check.reason}`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const totalPages = data ? Math.ceil(data.total / data.page_size) : 1;
 
   return (
@@ -118,12 +143,12 @@ export default function MonitoringAccountsPage() {
         </div>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
-            <Button><LogIn className="h-4 w-4 mr-2" />添加并登录</Button>
+            <Button><UserPlus className="h-4 w-4 mr-2" />添加账号</Button>
           </DialogTrigger>
           <DialogContent>
             <CreateMonitoringForm
-              onSubmit={(d) => createWithLoginMutation.mutate(d)}
-              onSkipLogin={(d) => createMutation.mutate(d)}
+              onSubmit={(d) => createMutation.mutate(d)}
+              onStartVnc={(d) => createWithLoginMutation.mutate(d)}
               isLoading={createWithLoginMutation.isPending || createMutation.isPending}
             />
           </DialogContent>
@@ -145,7 +170,7 @@ export default function MonitoringAccountsPage() {
                   <TableHead>状态</TableHead>
                   <TableHead>最后登录检查</TableHead>
                   <TableHead>备注</TableHead>
-                  <TableHead className="w-[80px]"></TableHead>
+                  <TableHead className="w-[180px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -162,6 +187,18 @@ export default function MonitoringAccountsPage() {
                     <TableCell className="text-sm text-muted-foreground max-w-xs truncate">{acc.notes || "—"}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
+                        <Button size="icon" variant="ghost" title="导入 Cookie" onClick={() => setCookieAcc(acc)}>
+                          <CookieIcon className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          title="重新检查登录态"
+                          disabled={healthCheckMutation.isPending}
+                          onClick={() => healthCheckMutation.mutate(acc.id)}
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" />
+                        </Button>
                         <Button size="icon" variant="ghost" onClick={() => setEditAcc(acc)}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
@@ -211,13 +248,31 @@ export default function MonitoringAccountsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!cookieAcc} onOpenChange={(o) => !o && setCookieAcc(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>导入 @{cookieAcc?.username} 的 Cookie</DialogTitle>
+            <DialogDescription>
+              粘贴从本机浏览器导出的 x.com/twitter.com Cookie JSON。系统不会回显 Cookie value，导入后会立即检查登录态。
+            </DialogDescription>
+          </DialogHeader>
+          {cookieAcc && (
+            <CookieImportForm
+              account={cookieAcc}
+              isLoading={importCookieMutation.isPending}
+              onSubmit={(cookies) => importCookieMutation.mutate({ id: cookieAcc.id, cookies })}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function CreateMonitoringForm({ onSubmit, onSkipLogin, isLoading }: {
+function CreateMonitoringForm({ onSubmit, onStartVnc, isLoading }: {
   onSubmit: (data: MonitoringAccountCreate) => void;
-  onSkipLogin: (data: MonitoringAccountCreate) => void;
+  onStartVnc: (data: MonitoringAccountCreate) => void;
   isLoading: boolean;
 }) {
   const [username, setUsername] = useState("");
@@ -233,9 +288,9 @@ function CreateMonitoringForm({ onSubmit, onSkipLogin, isLoading }: {
   return (
     <>
       <DialogHeader>
-        <DialogTitle>添加并登录监控账号</DialogTitle>
+        <DialogTitle>添加监控账号</DialogTitle>
         <DialogDescription>
-          输入用户名后点击"添加并登录"，系统将自动创建账号、浏览器配置和远程登录会话，然后打开远程浏览器供你完成 X/Twitter 登录。
+          输入用户名后先创建账号，再通过导入本机浏览器 Cookie 完成登录态接入。noVNC 仅作为备用人工处理入口。
         </DialogDescription>
       </DialogHeader>
       <div className="space-y-4">
@@ -255,16 +310,65 @@ function CreateMonitoringForm({ onSubmit, onSkipLogin, isLoading }: {
       <DialogFooter className="flex gap-2 sm:justify-between">
         <Button
           variant="outline"
-          onClick={() => onSkipLogin(formData)}
-          disabled={isLoading}
+          onClick={() => onStartVnc(formData)}
+          disabled={isLoading || !username.trim()}
         >
-          仅创建账号
+          备用：添加并打开 noVNC
         </Button>
         <Button
           onClick={() => onSubmit(formData)}
           disabled={isLoading || !username.trim()}
         >
-          {isLoading ? "创建中..." : "添加并登录"}
+          {isLoading ? "创建中..." : "添加账号"}
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
+
+function CookieImportForm({ account, isLoading, onSubmit }: {
+  account: MonitoringAccount;
+  isLoading: boolean;
+  onSubmit: (cookies: Record<string, unknown>[]) => void;
+}) {
+  const [text, setText] = useState("");
+
+  const handleSubmit = () => {
+    try {
+      const parsed = JSON.parse(text);
+      const cookies = Array.isArray(parsed) ? parsed : parsed?.cookies;
+      if (!Array.isArray(cookies) || cookies.length === 0) {
+        toast.error("Cookie JSON 必须是数组，或包含 cookies 数组");
+        return;
+      }
+      onSubmit(cookies);
+    } catch {
+      toast.error("Cookie JSON 格式无效");
+    }
+  };
+
+  return (
+    <>
+      <div className="space-y-4">
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          Cookie 等同登录态。不要粘贴密码，不要把 Cookie 分享给无关人员；这里只接受 x.com/twitter.com Cookie，且必须包含 auth_token。
+        </div>
+        <div className="space-y-2">
+          <Label>Cookie JSON *</Label>
+          <Textarea
+            rows={12}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder='[{"name":"auth_token","value":"...","domain":".x.com","path":"/"}]'
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          导入后会立即检查 @{account.username} 的登录态；过期 Cookie 会保持为“需要登录”或“需验证”。
+        </p>
+      </div>
+      <DialogFooter>
+        <Button onClick={handleSubmit} disabled={isLoading || !text.trim()}>
+          {isLoading ? "导入并检查中..." : "导入并检查"}
         </Button>
       </DialogFooter>
     </>

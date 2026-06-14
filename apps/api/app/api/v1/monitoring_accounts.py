@@ -2,18 +2,27 @@ import uuid
 
 from fastapi import APIRouter, HTTPException, Query
 
-from app.core.database import get_db
+from app.browser.cookies import CookieImportError
 from app.core.redis import get_redis
 from app.schemas.common import PaginatedResponse
 from app.schemas.monitoring_accounts import (
+    CookieImportRequest,
+    CookieImportResponse,
+    LoginHealthResponse,
     MonitoringAccountCreate,
+    MonitoringAccountHealthCheckResponse,
     MonitoringAccountResponse,
     MonitoringAccountUpdate,
     MonitoringAccountWithLoginSessionCreate,
     MonitoringAccountWithLoginSessionResponse,
 )
 from app.services import monitoring_accounts as service
-from app.services.monitoring_accounts import MonitoringAccountAlreadyExists
+from app.services.monitoring_accounts import (
+    BrowserProfileNotFound,
+    CookieStateNotFound,
+    MonitoringAccountAlreadyExists,
+    MonitoringAccountNotFound,
+)
 from app.streams import EVT_LOGIN_SESSION_CREATED, EVT_LOGIN_SESSION_RUNNING, WEB_EVENTS, StreamClient
 from app.streams.messages import WebEventPayload, encode_payload
 
@@ -74,6 +83,67 @@ async def create_with_login_session(data: MonitoringAccountWithLoginSessionCreat
     )
 
 
+@router.post("/{account_id}/cookies/import", response_model=CookieImportResponse)
+async def import_cookies(account_id: uuid.UUID, data: CookieImportRequest):
+    try:
+        account, profile, health = await service.import_monitoring_account_cookies(
+            account_id,
+            data.model_dump(),
+        )
+    except MonitoringAccountNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except CookieImportError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    await _emit_account_event(
+        "account.cookie_imported",
+        {"account_id": str(account.id), "profile_id": str(profile.id), "status": health.status.value},
+    )
+    await _emit_account_event(
+        "account.health_check.completed",
+        {
+            "account_id": str(account.id),
+            "profile_id": str(profile.id),
+            "status": health.status.value,
+            "reason": health.reason,
+        },
+    )
+
+    return CookieImportResponse(
+        account=MonitoringAccountResponse.model_validate(account),
+        browser_profile=profile,
+        health_check=LoginHealthResponse(**health.to_dict()),
+    )
+
+
+@router.post("/{account_id}/health-check", response_model=MonitoringAccountHealthCheckResponse)
+async def check_login_state(account_id: uuid.UUID):
+    try:
+        account, profile, health = await service.check_monitoring_account_login_state(account_id)
+    except MonitoringAccountNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except BrowserProfileNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except CookieStateNotFound as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+
+    await _emit_account_event(
+        "account.health_check.completed",
+        {
+            "account_id": str(account.id),
+            "profile_id": str(profile.id),
+            "status": health.status.value,
+            "reason": health.reason,
+        },
+    )
+
+    return MonitoringAccountHealthCheckResponse(
+        account=MonitoringAccountResponse.model_validate(account),
+        browser_profile=profile,
+        health_check=LoginHealthResponse(**health.to_dict()),
+    )
+
+
 @router.patch("/{account_id}", response_model=MonitoringAccountResponse)
 async def update_monitoring_account(account_id: uuid.UUID, data: MonitoringAccountUpdate):
     account = await service.update_monitoring_account(account_id, data)
@@ -87,3 +157,9 @@ async def delete_monitoring_account(account_id: uuid.UUID):
     deleted = await service.delete_monitoring_account(account_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Monitoring account not found")
+
+
+async def _emit_account_event(event_type: str, payload: dict) -> None:
+    redis = await get_redis()
+    client = StreamClient(redis)
+    await client.xadd(WEB_EVENTS, encode_payload(WebEventPayload(type=event_type, payload=payload)))
