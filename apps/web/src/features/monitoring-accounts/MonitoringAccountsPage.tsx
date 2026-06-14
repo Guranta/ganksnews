@@ -250,7 +250,7 @@ export default function MonitoringAccountsPage() {
       </Dialog>
 
       <Dialog open={!!cookieAcc} onOpenChange={(o) => !o && setCookieAcc(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90dvh] overflow-hidden sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>导入 @{cookieAcc?.username} 的 Cookie</DialogTitle>
             <DialogDescription>
@@ -348,8 +348,8 @@ function CookieImportForm({ account, isLoading, onSubmit }: {
   };
 
   return (
-    <>
-      <div className="space-y-4">
+    <div className="flex min-h-0 flex-col gap-4">
+      <div className="min-h-0 space-y-4 overflow-y-auto pr-1">
         <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
           Cookie 等同登录态。不要粘贴密码，不要把 Cookie 分享给无关人员；这里只接受 x.com/twitter.com Cookie，且必须包含 auth_token。
         </div>
@@ -357,6 +357,7 @@ function CookieImportForm({ account, isLoading, onSubmit }: {
           <Label>Cookie JSON *</Label>
           <Textarea
             rows={12}
+            className="h-[45dvh] min-h-48 max-h-[420px] overflow-auto font-mono text-xs [field-sizing:fixed]"
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder='[{"name":"auth_token","value":"...","domain":".x.com","path":"/"}]'
@@ -366,12 +367,12 @@ function CookieImportForm({ account, isLoading, onSubmit }: {
           导入后会立即检查 @{account.username} 的登录态；过期 Cookie 会保持为“需要登录”或“需验证”。
         </p>
       </div>
-      <DialogFooter>
+      <DialogFooter className="border-t bg-background pt-4">
         <Button onClick={handleSubmit} disabled={isLoading || !text.trim()}>
           {isLoading ? "导入并检查中..." : "导入并检查"}
         </Button>
       </DialogFooter>
-    </>
+    </div>
   );
 }
 
