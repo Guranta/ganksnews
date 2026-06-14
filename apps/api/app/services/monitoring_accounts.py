@@ -31,7 +31,8 @@ def _hash_token(token: str) -> str:
 
 def _build_vnc_url(session_id: uuid.UUID, token: str) -> str:
     base = settings.NOVNC_PUBLIC_BASE_URL.rstrip("/")
-    return f"{base}/vnc.html?path={base}/websockify&token={token}&autoconnect=true"
+    websocket_path = f"{base.lstrip('/')}/websockify"
+    return f"{base}/vnc.html?path={websocket_path}&token={token}&autoconnect=true"
 
 
 async def get_monitoring_accounts(page: int = 1, page_size: int = 20):
